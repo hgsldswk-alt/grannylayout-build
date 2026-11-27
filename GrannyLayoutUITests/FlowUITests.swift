@@ -1,0 +1,146 @@
+import XCTest
+
+final class FlowUITests: XCTestCase {
+    private enum Language: String, CaseIterable {
+        case en
+        case simplified = "zh-Hans"
+        case traditional = "zh-Hant"
+        case japanese = "ja"
+
+        var locale: String {
+            switch self {
+            case .en: "en_US"
+            case .simplified: "zh_CN"
+            case .traditional: "zh_TW"
+            case .japanese: "ja_JP"
+            }
+        }
+    }
+
+    private let app = XCUIApplication()
+    private let namespace = UUID().uuidString
+
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func launch(_ fixture: String, language: Language = .en, env: [String: String] = [:]) {
+        app.launchArguments = ["-ui-testing", "-reset", "-data-id", namespace,
+                               "-AppleLanguages", "(\(language.rawValue))", "-AppleLocale", language.locale, "-fixture", fixture]
+        app.launchEnvironment = env
+        app.launch()
+    }
+
+    private func element(_ id: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: id).firstMatch
+    }
+
+    private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let target = element(id)
+        XCTAssertTrue(target.waitForExistence(timeout: 10), id, file: file, line: line)
+        for _ in 0..<5 where !target.isHittable { app.swipeUp() }
+        target.tap()
+    }
+
+    private func exists(_ id: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(element(id).waitForExistence(timeout: timeout), id, file: file, line: line)
+    }
+
+    private func screenshot(_ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testStoreScreenshots() {
+        for language in Language.allCases {
+            launch("assemble", language: language)
+            exists("list.blanket")
+            screenshot("store-\(language.rawValue)-01-list")
+            tap("list.new")
+            exists("capture.found", timeout: 20)
+            sleep(1)
+            screenshot("store-\(language.rawValue)-02-capture")
+            tap("capture.cancel")
+            tap("list.blanket")
+            exists("cell.0")
+            screenshot("store-\(language.rawValue)-03-canvas")
+            tap("canvas.shuffle")
+            sleep(1)
+            app.swipeDown()
+            screenshot("store-\(language.rawValue)-04-shuffled")
+            tap("canvas.assemble")
+            exists("assemble.row")
+            screenshot("store-\(language.rawValue)-05-assemble")
+            app.terminate()
+        }
+    }
+
+    func testNewBlanketFromPhoto() {
+        launch("empty")
+        tap("list.new")
+        tap("capture.done")
+        exists("cell.0")
+        exists("cell.0")
+        tap("canvas.add")
+        exists("toast")
+    }
+
+    func testSwapAndUndo() {
+        launch("assemble")
+        tap("list.blanket")
+        let undo = element("canvas.undo")
+        XCTAssertTrue(undo.waitForExistence(timeout: 10))
+        XCTAssertFalse(undo.isEnabled)
+        tap("cell.0")
+        tap("cell.1")
+        XCTAssertTrue(undo.isEnabled)
+        tap("canvas.undo")
+        XCTAssertFalse(undo.isEnabled)
+    }
+
+    func testFinishShowsMilestone() {
+        launch("almost")
+        tap("list.blanket")
+        tap("canvas.assemble")
+        tap("assemble.next")
+        exists("milestone.share")
+    }
+
+    func testReviewDemo() {
+        launch("empty")
+        sleep(2)
+        tap("list.new")
+        exists("capture.found", timeout: 20)
+        sleep(3)
+        tap("capture.done")
+        exists("cell.0")
+        sleep(2)
+        tap("cell.0"); sleep(1)
+        tap("cell.1"); sleep(2)
+        tap("canvas.shuffle"); sleep(3)
+        tap("canvas.assemble")
+        exists("assemble.row")
+        sleep(2)
+        for _ in 0..<3 { tap("assemble.next"); sleep(1) }
+        app.swipeDown()
+        sleep(1)
+        let back = app.navigationBars.buttons.element(boundBy: 0)
+        if back.waitForExistence(timeout: 3) { back.tap(); sleep(1) }
+        if element("canvas.export").waitForExistence(timeout: 5) {
+            tap("canvas.export"); sleep(3)
+        }
+    }
+
+    func testPasteCode() {
+        let code = "GSQ1:eyJyb3dzIjo2LCJjb2xzIjo3LCJncm91cHMiOlswLDEsMiwzLDQsNSw2LDcsMCwxLDIsMyw0LDUsNiw3LDAsMSwyLDMsNCw1LDYsNywwLDEsMiwzLDQsNSw2LDcsMCwxLDIsMyw0LDUsNiw3LDAsMV19"
+        launch("assemble", env: ["UITEST_CODE": code])
+        tap("list.blanket")
+        tap("canvas.more")
+        let paste = app.buttons["Paste layout code"]
+        XCTAssertTrue(paste.waitForExistence(timeout: 5))
+        paste.tap()
+        exists("toast")
+    }
+}

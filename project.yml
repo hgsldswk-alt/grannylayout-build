@@ -1,0 +1,78 @@
+name: GrannyLayout
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  knownRegions: [en, zh-Hans, zh-Hant, ja]
+settings:
+  base:
+    APP_ID: com.hgsldswk.grannylayout
+    APP_STORE_ID: "6837841450"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  GrannyLayout:
+    type: application
+    platform: iOS
+    sources: [GrannyLayout, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: GrannyLayout AppStore
+    info:
+      path: GrannyLayout/Info.plist
+      properties:
+        CFBundleDisplayName: Granny Square Layout
+        CFBundleDevelopmentRegion: en
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        APP_STORE_ID: $(APP_STORE_ID)
+        NSPhotoLibraryUsageDescription: Pick a photo of your laid-out squares.
+        NSCameraUsageDescription: Take a photo of your laid-out squares so the app can arrange them for you.
+  GrannyLayoutTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [GrannyLayoutTests, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+  GrannyLayoutUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [GrannyLayoutUITests]
+    dependencies:
+      - target: GrannyLayout
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: GrannyLayout
+schemes:
+  GrannyLayout:
+    build:
+      targets:
+        GrannyLayout: all
+        GrannyLayoutTests: [test]
+    test:
+      config: Debug
+      targets: [GrannyLayoutTests]
+  GrannyLayoutUI:
+    build:
+      targets:
+        GrannyLayout: all
+        GrannyLayoutUITests: [test]
+    test:
+      config: Debug
+      targets: [GrannyLayoutUITests]
